@@ -6,3 +6,5 @@ Componentes:
 202016248 - Gabriel Ferreira de Freitas Dutra
 
 190087048 - Felipe Rodrigues de Oliveira 
+
+200025571 - Necivaldo Amaral Pinto Junior
