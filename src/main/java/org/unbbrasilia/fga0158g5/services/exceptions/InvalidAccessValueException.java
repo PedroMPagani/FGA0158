@@ -6,4 +6,9 @@ public class InvalidAccessValueException extends Exception {
         super(message);
     }
 
+    @Override
+    public void printStackTrace(){
+        System.out.println(getMessage());
+    }
+
 }

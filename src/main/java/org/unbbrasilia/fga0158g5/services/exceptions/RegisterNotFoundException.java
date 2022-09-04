@@ -1,8 +1,8 @@
 package org.unbbrasilia.fga0158g5.services.exceptions;
 
-public class BlankDescriptionException extends Exception {
+public class RegisterNotFoundException extends Exception {
 
-    public BlankDescriptionException(String message){
+    public RegisterNotFoundException(String message){
         super(message);
     }
 
