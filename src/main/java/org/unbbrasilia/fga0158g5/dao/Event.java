@@ -1,8 +1,9 @@
 package org.unbbrasilia.fga0158g5.dao;
 
 import lombok.Getter;
+import lombok.Setter;
 
-@Getter
+@Getter @Setter
 public class Event {
 
     private Long start;

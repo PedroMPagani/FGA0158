@@ -77,20 +77,6 @@ public class TerminalService extends Service implements Runnable {
         }
     }
 
-    private void runOption(Scanner scanner,int selectedOption) throws Exception{
-        switch (selectedOption){
-            case 1:{
-                // create new registry.
-                startRegistering(scanner);
-                break;
-            }
-            case 2:{
-                startSearch(scanner);
-                break;
-            }
-        }
-    }
-
     private void startSearch(Scanner scanner) throws Exception {
         try {
             log("1 - Pesquisar estacionamento");
@@ -181,6 +167,80 @@ public class TerminalService extends Service implements Runnable {
         }
     }
 
+
+    private void runOption(Scanner scanner,int selectedOption) throws Exception{
+        switch (selectedOption){
+            case 1:{
+                // create new registry.
+                startRegistering(scanner);
+                break;
+            }
+            case 2:{
+                startSearch(scanner);
+                break;
+            }
+            case 3:{
+                changeRegistry(scanner);
+                break;
+            }
+        }
+    }
+
+    private boolean confirm(Scanner sca){
+        String line = sca.nextLine();
+        if(line.toLowerCase().startsWith("y")){
+            return true;
+        }
+        return false;
+    }
+
+    private void changeRegistry(Scanner scanner) throws WrongValueException {
+        try {
+            log("Escolha qual registro você deseja alterar:");
+            log("1 - Estacionamento");
+            log("2 - Acesso");
+            log("3 - Evento");
+            int opt = Integer.parseInt(scanner.nextLine());
+            if(opt <= 0 || opt > 3) {
+                throw new NumberFormatException();
+            }
+            switch (opt){
+                case 1:{
+                    log("Digite o ID do estacionamento.");
+                    try {
+                        changeParkLot(scanner);
+                    } catch (RegisterNotFoundException | WrongValueException e){
+                        e.printStackTrace();
+                    }
+                    break;
+                }
+            }
+
+        } catch (NumberFormatException exception){
+            throw new WrongValueException("Tipo de dado não existente.");
+        }
+    }
+
+    private void changeParkLot(Scanner scanner) throws RegisterNotFoundException, WrongValueException{
+        try {
+            int parkId = Integer.parseInt(scanner.nextLine());
+            BigInteger bigInteger = BigInteger.valueOf(parkId);
+            ParkingLot parkingLot = companyService.parkingLots.get(bigInteger);
+            if(parkingLot == null){
+                throw new RegisterNotFoundException("Estacionamento com ID " + parkId + " não encontrado.");
+            }
+            log("Estacionamento ID: " + parkingLot.getParkingId());
+            log("Deseja alterar horário de abertura? (Y/N)");
+            if(confirm(scanner)){
+
+            }
+
+        } catch (NumberFormatException exception){
+            throw new WrongValueException("O ID do estacionamento deve ser um número inteiro.");
+        }
+
+    }
+
     private void showRegisterMenuOptions(){
         log("Operações possíveis:");
         log(" 1 - Cadastrar um estacionamento");
@@ -193,7 +253,7 @@ public class TerminalService extends Service implements Runnable {
         log(" 1 - Realizar cadastros.");
         log(" 2 - Pesquisar cadastros");
         log(" 3 - Alterar dados de um cadastro em um estacionamento.");
-        log(" 4 - Excluir cadastro em um estacionamento.");
+        log(" 4 - Excluir dados.");
         log(" 5 - Debug all parking lots.");
     }
 
@@ -336,12 +396,21 @@ public class TerminalService extends Service implements Runnable {
     }
 
     //     * Evento: nome do evento, data de inicio e fim, hora de inicio e fim.
-    private void registerEvent(Scanner scanner){
-
+    private void registerEvent(Scanner scanner) throws RegistryUnallowedException {
+        log("Insira o nome do evento:");
+        String eventName = scanner.nextLine();
+        String dateFormat = "dd/MM/yyyy HH:mm";
+        log("Insira a data de início do evento no formato dd/MM/yyyy HH:mm, ou seja: dia/mes/ano hora:minuto");
+        Date start = getAcessDate(scanner, dateFormat);
+        log("Insira a data do término do evento no formato dd/MM/yyyy HH:mm, ou seja: dia/mes/ano hora:minuto");
+        Date finish = getAcessDate(scanner, dateFormat);
+        if(!finish.after(start) || finish.equals(start)){
+            throw new RegistryUnallowedException("A data de términou não pode ser anterior ou igual a data de início de evento.");
+        }
+        Event event = new Event(start.getTime(), finish.getTime(), eventName);
+        Main.events.add(event);
+        log("Evento registrado!");
     }
-
-
-
 
     private double getPercentage(String input) throws Exception {
         if(!input.contains("%")){
