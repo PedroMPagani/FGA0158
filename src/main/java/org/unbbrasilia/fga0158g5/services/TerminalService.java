@@ -4,10 +4,12 @@ import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.unbbrasilia.fga0158g5.dao.Logger;
 import org.unbbrasilia.fga0158g5.dao.ParkingLot;
+import org.unbbrasilia.fga0158g5.dao.base.Access;
 import org.unbbrasilia.fga0158g5.services.base.Service;
 import org.unbbrasilia.fga0158g5.services.exceptions.InvalidAccessValueException;
 import org.unbbrasilia.fga0158g5.services.exceptions.InvalidMenuOptionException;
 import org.unbbrasilia.fga0158g5.services.exceptions.RegisterNotFoundException;
+import org.unbbrasilia.fga0158g5.util.AcessUtil;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -146,19 +148,20 @@ public class TerminalService extends Service implements Runnable {
                     "ser igual/anterior a data de entrada.").printStackTrace();
             return;
         }
-        System.out.println("Insira o número do estacionamento:");
+        System.out.println("Insira o número do estacionamento: ");
         String parkId = scanner.nextLine();
         try {
             BigInteger id = new BigDecimal(parkId).toBigInteger();
-
             ParkingLot parkingLot = companyService.parkingLots.get(id);
             if(parkingLot == null){
                 throw new RegisterNotFoundException("Não foi encontrado o estacionamento com ID: " + id);
             }
+            // add access ->
+            Access acess = AcessUtil.returnRegistry(parkingLot, carPlate, in, out);
+            System.out.println("Registro concluído!");
         } catch (NumberFormatException exception){
             new InvalidAccessValueException("A data de saída não pode " +
                     "ser igual/anterior a data de entrada.").printStackTrace();
-
         }
     }
 

@@ -3,6 +3,8 @@ package org.unbbrasilia.fga0158g5.dao;
 import lombok.Getter;
 import org.unbbrasilia.fga0158g5.dao.base.Access;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -23,6 +25,8 @@ public class ParkingLot {
      */
     private final List<Access> acesses;
 
+    private final List<Event> events;
+
     /**
      * Maximum number of vehicles that can be stored in this place.
      */
@@ -30,15 +34,22 @@ public class ParkingLot {
 
     private final ParkingInformation pricingInformation;
 
-    public ParkingLot(int parkId, CopyOnWriteArrayList<Access> list, int maxVehicles, ParkingInformation parkingInformation){
+    public ParkingLot(int parkId, CopyOnWriteArrayList<Access> list, int maxVehicles, ParkingInformation parkingInformation,
+                      CopyOnWriteArrayList<Event> events){
         this.parkingId = parkId;
         this.acesses = list;
         this.maxVehicleCapacity = maxVehicles;
         this.pricingInformation = parkingInformation;
+        this.events = events;
+    }
+
+    public boolean hasFreeSpot(){
+        Long currentTime = LocalDateTime.now().atZone(ZoneId.systemDefault()).toEpochSecond();
+        return (this.maxVehicleCapacity - (this.acesses.stream().filter(s->s.getLeaveTime() - currentTime <= 0).count())) > 0;
     }
 
     public ParkingLot(int parkId, int maxVehicles, ParkingInformation parkingInformation){
-        this(parkId, new CopyOnWriteArrayList<>(),maxVehicles, parkingInformation);
+        this(parkId, new CopyOnWriteArrayList<>(),maxVehicles, parkingInformation, new CopyOnWriteArrayList<>());
     }
 
     @Getter
@@ -49,6 +60,12 @@ public class ParkingLot {
         private double fullDayValue;
         private double fullNightPercentage; // night price is fullDayValue * fullNightPercentage (we'll store that in /100 already).
         private double percentReturnHiring;
+
+        // used to determine wether it will be a night period or not.
+        private int startNightHour;
+        private int startNightMinute;
+        private int endNightHour;
+        private int endNightMinute;
 
         private long opensAt;
         private long closesAt;
