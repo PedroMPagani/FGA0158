@@ -1,8 +1,8 @@
 package org.unbbrasilia.fga0158g5.dao;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import lombok.Getter;
 
+@Getter
 public class Event {
 
     private Long start;
