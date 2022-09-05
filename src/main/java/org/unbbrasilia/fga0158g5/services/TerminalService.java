@@ -13,6 +13,7 @@ import org.unbbrasilia.fga0158g5.util.AccessUtil;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.*;
@@ -96,7 +97,6 @@ public class TerminalService extends Service implements Runnable {
                         log("Estacionamento ID: " + parkingLot.getParkingId());
                         log("Número de vagas: " + parkingLot.getMaxVehicleCapacity());
                         log("Número de vagas ocupadas: " + parkingLot.getSpotsUsed());
-
                     } catch (NumberFormatException exception){
                         throw new WrongValueException("O ID do estacionamento deve ser um número inteiro.");
                     }
@@ -167,7 +167,6 @@ public class TerminalService extends Service implements Runnable {
         }
     }
 
-
     private void runOption(Scanner scanner,int selectedOption) throws Exception{
         switch (selectedOption){
             case 1:{
@@ -214,6 +213,22 @@ public class TerminalService extends Service implements Runnable {
                     }
                     break;
                 }
+                case 2:{
+                    log("Digite o ID do estacionamento onde o acesso está localizado.");
+                    try {
+                        changeAccess(scanner);
+                    } catch (RegisterNotFoundException | WrongValueException e){
+                        e.printStackTrace();
+                    }
+                    break;
+                }
+                case 3:{
+                    try {
+                        changeEvent(scanner);
+                    } catch (RegisterNotFoundException | WrongValueException e){
+                        e.printStackTrace();
+                    }
+                }
             }
 
         } catch (NumberFormatException exception){
@@ -221,7 +236,129 @@ public class TerminalService extends Service implements Runnable {
         }
     }
 
-    private void changeParkLot(Scanner scanner) throws RegisterNotFoundException, WrongValueException{
+
+    private void changeEvent(Scanner scanner) throws RegisterNotFoundException, WrongValueException {
+        try {
+            log("Digite o nome do evento.");
+            String name = scanner.nextLine();
+            List<Event> accessList = Main.events.stream().filter(s->s.getEventName().equals(name)).collect(Collectors.toList());
+            if(accessList.isEmpty()){
+                throw new RegisterNotFoundException("Não foi encontrado nenhum evento com este nome.");
+            }
+            int size = accessList.size();
+            log("Encontrados " + size + " eventos com este nome neste estacionamento.");
+            log("Os eventos serão mostrados 1 por 1, decida qual acesso você quer alterar!");
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+            for (int i = 0; i < size; i++){
+                log("Número evento "+(i + 1));
+                Event ac = accessList.get(i);
+                log("Data de inicio: " + simpleDateFormat.format(ac.getStart()));
+                log("Data de termino: " + simpleDateFormat.format(ac.getEnd()));
+            }
+            log("Digite o número do evento que você deseja alterar..");
+            try {
+                int accessId = Integer.parseInt(scanner.nextLine());
+                try {
+                    Event ac = accessList.get(accessId);
+                    log("Deseja alterar a data de início do evento? (Y/N)");
+                    String dateFormat = "dd/MM/yyyy HH:mm";
+                    if(confirm(scanner)){
+                        log("Formato de data deve ser: " + dateFormat);
+                        log("Insira a data de inicio:");
+                        Date in = getAcessDate(scanner, dateFormat);
+                        ac.setStart(in.getTime());
+                    }
+                    log("Deseja alterar a data de término do evento? (Y/N)");
+                    if(confirm(scanner)){
+                        log("Formato de data deve ser: " + dateFormat);
+                        log("Insira a data de fim:");
+                        Date out = getAcessDate(scanner, dateFormat);
+                        Date in = new Date(ac.getStart());
+                        if(!out.after(in) || out.equals(in)){
+                            throw new WrongValueException("A data de término não pode ser anterior ou igual a data de inicio.");
+                        }
+                        ac.setEnd(out.getTime());
+                    }
+                } catch (ArrayIndexOutOfBoundsException exception){
+                    throw new RegisterNotFoundException("Não foi encontrado um acesso com este número.");
+                }
+            } catch (NumberFormatException exception){
+                throw new WrongValueException("O número do acesso deveria ter sido um número inteiro.");
+            }
+        } catch (NumberFormatException exception){
+            throw new WrongValueException("O Id do estacionamento deve ser um número inteiro.");
+        }
+
+    }
+
+    private void changeAccess(Scanner scanner) throws RegisterNotFoundException, WrongValueException {
+        try {
+            int parkId = Integer.parseInt(scanner.nextLine());
+            BigInteger bigInteger = BigInteger.valueOf(parkId);
+            ParkingLot parkingLot = companyService.parkingLots.get(bigInteger);
+            if(parkingLot == null){
+                throw new RegisterNotFoundException("Estacionamento com ID " + parkId + " não encontrado.");
+            }
+            log("Digite a placa do acesso.");
+            String placa = scanner.nextLine();
+            List<Access> accessList = parkingLot.getAcesses().stream().filter(s->s.getVehiclePlate().equals(placa)).collect(Collectors.toList());
+            if(accessList.isEmpty()){
+                throw new RegisterNotFoundException("Não foi encontrado nenhum acesso com esta placa.");
+            }
+            int size = accessList.size();
+            log("Encontrados " + size + " acessos com esta placa neste estacionamento.");
+            log("Os acessos serão mostrados 1 por 1, decida qual acesso você quer alterar!");
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+            for (int i = 0; i < size; i++){
+                log("Número Acesso "+(i + 1));
+                Access ac = accessList.get(i);
+                log("Data de entrada: " + simpleDateFormat.format(ac.getEntryTime()));
+                log("Data de saída: " + simpleDateFormat.format(ac.getLeaveTime()));
+            }
+            log("Digite o número do acesso.");
+            try {
+                int accessId = Integer.parseInt(scanner.nextLine());
+                try {
+                    Access ac = accessList.get(accessId);
+                    log("Deseja alterar a data de entrada do acesso? (Y/N)");
+                    String dateFormat = "dd/MM/yyyy HH:mm";
+                    boolean rcPrice = false;
+                    if(confirm(scanner)){
+                        log("Formato de data deve ser: " + dateFormat);
+                        log("Insira a data de entrada:");
+                        Date in = getAcessDate(scanner, dateFormat);
+                        ac.setEntryTime(in.getTime());
+                        rcPrice = true;
+                    }
+                    log("Deseja alterar a data de saída do acesso? (Y/N)");
+                    if(confirm(scanner)){
+                        log("Formato de data deve ser: " + dateFormat);
+                        log("Insira a data de saída:");
+                        Date out = getAcessDate(scanner, dateFormat);
+                        Date in = new Date(ac.getEntryTime());
+                        if(!out.after(in) || out.equals(in)){
+                            ac.calculatePrice(parkingLot);
+                            throw new WrongValueException("A data de saída não pode ser anterior ou igual a data de entrada.");
+                        }
+                        ac.setLeaveTime(out.getTime());
+                        rcPrice = true;
+                    }
+                    if(rcPrice){
+                        ac.calculatePrice(parkingLot);
+                    }
+                } catch (ArrayIndexOutOfBoundsException exception){
+                    throw new RegisterNotFoundException("Não foi encontrado um acesso com este número.");
+                }
+            } catch (NumberFormatException exception){
+                throw new WrongValueException("O número do acesso deveria ter sido um número inteiro.");
+            }
+        } catch (NumberFormatException exception){
+            throw new WrongValueException("O Id do estacionamento deve ser um número inteiro.");
+        }
+
+    }
+
+    private void changeParkLot(Scanner scanner) throws RegisterNotFoundException, WrongValueException {
         try {
             int parkId = Integer.parseInt(scanner.nextLine());
             BigInteger bigInteger = BigInteger.valueOf(parkId);
@@ -232,9 +369,105 @@ public class TerminalService extends Service implements Runnable {
             log("Estacionamento ID: " + parkingLot.getParkingId());
             log("Deseja alterar horário de abertura? (Y/N)");
             if(confirm(scanner)){
-
+                log("Digite o horário no formato hora:minuto, 00:00 para estacionamentos 24h.");
+                Date time = getAcessDate(scanner,"HH:mm");
+                parkingLot.getPricingInformation().setOpensAt(time.getTime());
             }
-
+            log("Deseja alterar horário de fechamento? (Y/N)");
+            if(confirm(scanner)){
+                log("Digite o horário no formato hora:minuto, 00:00 para estacionamentos 24h.");
+                Date time = getAcessDate(scanner,"HH:mm");
+                parkingLot.getPricingInformation().setClosesAt(time.getTime());
+            }
+            log("Deseja aumentar o número máximo de veículos? (Y/N)");
+            if(confirm(scanner)) {
+                log("Digite o número máximo de veículos.");
+                int total = getInt(scanner.nextLine());
+                parkingLot.setMaxVehicleCapacity(total);
+            }
+            log("Deseja trocar o preço de fração de 15 min? (Y/N)");
+            if(confirm(scanner)){
+                log("Digite o novo preço, não pode ser menor que 0.");
+                double price = getDouble(scanner.nextLine());
+                parkingLot.getPricingInformation().setFractionValue(price);
+            }
+            log("Deseja trocar o desconto de hora cheia? (Y/N)");
+            if(confirm(scanner)){
+                log("Digite a nova porcentagem de desconto, não se esqueça de inserir %.");
+                double percentage = getPercentage(scanner.nextLine());
+                if(percentage < 0){
+                    throw new WrongValueException("A porcentagem não pode ser menor de 0.");
+                }
+                parkingLot.getPricingInformation().setFullHourDiscount(percentage/100);
+            }
+            log("Deseja trocar o valor de acesso de dia? (Y/N)");
+            if(confirm(scanner)){
+                log("Digite o novo preço de acesso diária.");
+                double money = getDouble(scanner.nextLine());
+                if(money < 0){
+                    throw new WrongValueException("A preço não pode ser menor de 0.");
+                }
+                parkingLot.getPricingInformation().setFullDayValue(money);
+            }
+            log("Deseja trocar a porcentagem de desconto da noite? (Y/N)");
+            if(confirm(scanner)){
+                log("Digite o novo valor de desconto noturno. não se esqueça de por %, ex: 50%");
+                double percentage = getPercentage(scanner.nextLine());
+                if(percentage < 0){
+                    throw new WrongValueException("A porcenteagem não pode ser menor de 0.");
+                }
+                parkingLot.getPricingInformation().setFullNightPercentage(percentage/100);
+            }
+            log("Deseja trocar a porcentagem de retorno do contratante? (Y/N)");
+            if(confirm(scanner)){
+                log("Digite o novo valor da porcentagem. não se esqueça de por %, ex: 50%");
+                double percentage = getPercentage(scanner.nextLine());
+                if(percentage < 0){
+                    throw new WrongValueException("A porcentagem não pode ser menor de 0.");
+                }
+                parkingLot.getPricingInformation().setPercentReturnHiring(percentage/100);
+            }
+            log("Deseja trocar a porcentagem de retorno do contratante? (Y/N)");
+            if(confirm(scanner)){
+                log("Digite o novo valor da porcentagem. não se esqueça de por %, ex: 50%");
+                double percentage = getPercentage(scanner.nextLine());
+                if(percentage < 0){
+                    throw new WrongValueException("A porcentagem não pode ser menor de 0.");
+                }
+                parkingLot.getPricingInformation().setPercentReturnHiring(percentage/100);
+            }
+            log("Deseja trocar o preço de acessos em eventos? (Y/N)");
+            if(confirm(scanner)){
+                log("Digite o novo valor do acesso:");
+                double price = getDouble(scanner.nextLine());
+                if(price < 0){
+                    throw new WrongValueException("O valor não pode ser menor de 0.");
+                }
+                parkingLot.getPricingInformation().setEventPrice(price);
+            }
+            log("Deseja trocar o preço de acessos no mes? (Y/N)");
+            if(confirm(scanner)){
+                log("Digite o novo valor do acesso:");
+                double price = getDouble(scanner.nextLine());
+                if(price < 0){
+                    throw new WrongValueException("O valor não pode ser menor de 0.");
+                }
+                parkingLot.getPricingInformation().setFullMonthPrice(price);
+            }
+            log("Deseja alterar horário de início da noite? (Y/N)");
+            if(confirm(scanner)){
+                log("Digite o horário no formato hora:minuto, 00:00 para estacionamentos 24h.");
+                Date time = getAcessDate(scanner,"HH:mm");
+                parkingLot.getPricingInformation().setStartNightHour((time.getHours()));
+                parkingLot.getPricingInformation().setStartNightMinute((time.getMinutes()));
+            }
+            log("Deseja alterar horário de término da noite? (Y/N)");
+            if(confirm(scanner)){
+                log("Digite o horário no formato hora:minuto, 00:00 para estacionamentos 24h.");
+                Date time = getAcessDate(scanner,"HH:mm");
+                parkingLot.getPricingInformation().setEndNightHour((time.getHours()));
+                parkingLot.getPricingInformation().setEndNightMinute((time.getMinutes()));
+            }
         } catch (NumberFormatException exception){
             throw new WrongValueException("O ID do estacionamento deve ser um número inteiro.");
         }
@@ -412,7 +645,7 @@ public class TerminalService extends Service implements Runnable {
         log("Evento registrado!");
     }
 
-    private double getPercentage(String input) throws Exception {
+    private double getPercentage(String input) throws WrongValueException {
         if(!input.contains("%")){
             throw new WrongValueException("O número inserido precisa ser em porcentagem e conter %.");
         }
@@ -425,7 +658,7 @@ public class TerminalService extends Service implements Runnable {
         return percentage;
     }
 
-    private double getDouble(String input) throws Exception {
+    private double getDouble(String input) throws WrongValueException {
         double spots = 0;
         try {
             spots = Double.parseDouble(input);
@@ -433,14 +666,15 @@ public class TerminalService extends Service implements Runnable {
         } catch (NumberFormatException e){
             throw new WrongValueException("O número inserido deveria ser fracionário.");
         }
-        if(Double.isNaN(spots) && Double.isInfinite(spots)){
+        if(Double.isNaN(spots) && Double.isInfinite(spots) ||
+        spots < 0){
             throw new WrongValueException("O número inserido deveria ser fracionário.");
         }
         return spots;
     }
 
-    private int getInt(String input) throws Exception {
-        int spots = 0;
+    private int getInt(String input) throws WrongValueException {
+        int spots;
         try {
             spots = Integer.parseInt(input);
         } catch (NumberFormatException e){
@@ -463,7 +697,7 @@ public class TerminalService extends Service implements Runnable {
     }
 
 
-    private LocalTime getAcessDate2(Scanner scanner, String pattern) throws Exception {
+    private LocalTime getAcessDate2(Scanner scanner, String pattern) throws WrongValueException {
         try {
             return LocalTime.parse(scanner.nextLine(), DateTimeFormatter.ofPattern(pattern));
         } catch (Exception exception){

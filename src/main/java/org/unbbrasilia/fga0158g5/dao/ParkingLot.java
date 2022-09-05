@@ -1,6 +1,7 @@
 package org.unbbrasilia.fga0158g5.dao;
 
 import lombok.Getter;
+import lombok.Setter;
 import org.unbbrasilia.fga0158g5.dao.base.Access;
 
 import java.time.LocalDateTime;
@@ -8,7 +9,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-@Getter
+@Getter @Setter
 public class ParkingLot {
 
     /**
@@ -28,7 +29,7 @@ public class ParkingLot {
     /**
      * Maximum number of vehicles that can be stored in this place.
      */
-    private final int maxVehicleCapacity;
+    private int maxVehicleCapacity;
 
     private final ParkingInformation pricingInformation;
 
@@ -40,7 +41,6 @@ public class ParkingLot {
     }
 
     public boolean hasFreeSpot(){
-        Long currentTime = LocalDateTime.now().atZone(ZoneId.systemDefault()).toEpochSecond();
         return (this.maxVehicleCapacity - getSpotsUsed()) > 0;
     }
 
@@ -57,7 +57,7 @@ public class ParkingLot {
         return (this.acesses.stream().filter(s->s.getLeaveTime() - currentTime > 0).count());
     }
 
-    @Getter
+    @Getter @Setter
     public static class ParkingInformation {
 
         private double fractionValue;
