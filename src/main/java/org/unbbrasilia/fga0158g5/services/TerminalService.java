@@ -13,12 +13,9 @@ import org.unbbrasilia.fga0158g5.util.AccessUtil;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.text.NumberFormat;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoField;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -26,8 +23,6 @@ public class TerminalService extends Service implements Runnable {
 
     @Getter protected final @NotNull CompanyService companyService; // dependency injection.
     protected final @NotNull Thread thread;
-    private int selectedOption = -1; // idle!
-
     public TerminalService(@NotNull CompanyService service){
         super(new Logger("Terminal Service Logger"));
         this.companyService = service;
@@ -50,35 +45,29 @@ public class TerminalService extends Service implements Runnable {
         try (Scanner scanner = new Scanner(System.in)){
             while (true){
                 showMenu();
-                readOption(scanner);
+                try {
+                    readOption(scanner);
+                } catch (InvalidMenuOptionException | RegisterNotFoundException | WrongValueException e){
+                    e.printStackTrace();
+                }
             }
         }
     }
 
-    private void readOption(Scanner scanner){
+    private void readOption(Scanner scanner) throws InvalidMenuOptionException, RegisterNotFoundException, WrongValueException {
         String line = scanner.nextLine();
         try {
             int option = Integer.parseInt(line);
             if(option > 4 || option < 1){
-                try {
-                    throw new InvalidMenuOptionException();
-                } catch (InvalidMenuOptionException e){
-                    e.printStackTrace();
-                }
+                throw new InvalidMenuOptionException();
             }
-            log("ran");
-            try {
-                runOption(scanner, option);
-            } catch (Exception exception){
-
-            }
-            //
+            runOption(scanner, option);
         } catch (NumberFormatException exception){
             new InvalidMenuOptionException().printStackTrace();
         }
     }
 
-    private void startSearch(Scanner scanner) throws Exception {
+    private void startSearch(Scanner scanner) throws WrongValueException, InvalidMenuOptionException, RegisterNotFoundException {
         try {
             log("1 - Pesquisar estacionamento");
             log("2 - Pesquisar Acesso em estacionamento");
@@ -167,7 +156,7 @@ public class TerminalService extends Service implements Runnable {
         }
     }
 
-    private void runOption(Scanner scanner,int selectedOption) throws Exception{
+    private void runOption(Scanner scanner,int selectedOption) throws WrongValueException, RegisterNotFoundException, InvalidMenuOptionException {
         switch (selectedOption){
             case 1:{
                 // create new registry.
@@ -182,6 +171,105 @@ public class TerminalService extends Service implements Runnable {
                 changeRegistry(scanner);
                 break;
             }
+            case 4:{
+                deleteRegister(scanner);
+                break;
+            }
+        }
+    }
+
+    private void deleteRegister(Scanner scanner) throws InvalidMenuOptionException, RegisterNotFoundException, WrongValueException {
+        String input = scanner.nextLine();
+        try {
+            log("Deletar objetos, opções:");
+            log("Parking lot - 1");
+            log("Access - 2 ");
+            log("Evento - 3");
+            int option = Integer.parseInt(input);
+            if(option <= 0 || option > 3){
+                throw new InvalidMenuOptionException("Opção de menu desconhecida.");
+            }
+            switch (option){
+                case 1:{
+                    log("Digite o ID do estacionamento.");
+                    try {
+                        int parkId = Integer.parseInt(scanner.nextLine());
+                        BigInteger bigInteger = BigInteger.valueOf(parkId);
+                        ParkingLot parkingLot = companyService.parkingLots.remove(bigInteger);
+                        if (parkingLot == null) {
+                            throw new RegisterNotFoundException("Estacionamento com ID " + parkId + " não encontrado.");
+                        }
+                        log("Estacionamento removido com sucesso.");
+                        return;
+                    } catch (NumberFormatException formatException){
+                        throw new WrongValueException("O id do estacionamento deve ser um número inteiro.");
+                    }
+                }
+                case 2:{
+                    log("Digite o ID do estacionamento.");
+                    try {
+                        int parkId = Integer.parseInt(scanner.nextLine());
+                        BigInteger bigInteger = BigInteger.valueOf(parkId);
+                        ParkingLot parkingLot = companyService.parkingLots.get(bigInteger);
+                        if (parkingLot == null){
+                            throw new RegisterNotFoundException("Estacionamento com ID " + parkId + " não encontrado.");
+                        }
+                        log("Estacionamento ID: " + parkingLot.getParkingId());
+                        log("Digite a placa que deseja fazer a pesquisa");
+                        String plate = scanner.nextLine();
+                        // don't use .toList() to avoid wrong JDK version,
+                        // since the software doesn't specify which java version should it be ran with.
+                        List<Access> accessList = parkingLot.getAcesses().stream().filter(s->s.getVehiclePlate().equals(plate)).collect(Collectors.toList());
+                        if(accessList.isEmpty()){
+                            throw new RegisterNotFoundException("Não foi encontrado nenhum registro com esta placa. case sensitive");
+                        }
+                        log("Registros encontrados: " + accessList.size());
+                        log("Dados:");
+                        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+                        Iterator<Access> accessIterator = parkingLot.getAcesses().iterator();
+                        while (accessIterator.hasNext()) {
+                            Access ec = accessIterator.next();
+                            if (ec.getVehiclePlate().equals(plate)) {
+                                log("Dado encontrado");
+                                log("Data de entrada: " + simpleDateFormat.format(ec.getEntryTime()));
+                                log("Data de saída: " + simpleDateFormat.format(ec.getLeaveTime()));
+                                log("Deseja remover o acesso com os dados: (Y/N)");
+                                if (confirm(scanner)){
+                                    accessIterator.remove();
+                                }
+                            }
+                        }
+                    } catch (NumberFormatException e){
+                        throw new WrongValueException("O ID do estacionamento deve ser um número inteiro.");
+                    }
+                    return;
+                }
+                case 3:{
+                    log("Digite o nome do evento");
+                    String eventName = scanner.nextLine();
+                    SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+                    Iterator<Event> iterator = Main.events.iterator();
+                    boolean found = false;
+                    while (iterator.hasNext()){
+                        Event ev = iterator.next();
+                        if(ev.getEventName().equals(eventName)){
+                            found = true;
+                            log("Evento encontrado, deseja deletar este evento com os dados: ? (Y/N)");
+                            log("Data de início do evento: " + simpleDateFormat.format(ev.getStart()));
+                            log("Data de término do evento: " + simpleDateFormat.format(ev.getEnd()));
+                            if(confirm(scanner)){
+                                iterator.remove();
+                            }
+                        }
+                    }
+                    if(!found){
+                        throw new RegisterNotFoundException("Evento não encontrado");
+                    }
+                    return;
+                }
+            }
+        } catch (NumberFormatException e){
+            throw new InvalidMenuOptionException("Opção não encontrada.");
         }
     }
 
@@ -487,7 +575,6 @@ public class TerminalService extends Service implements Runnable {
         log(" 2 - Pesquisar cadastros");
         log(" 3 - Alterar dados de um cadastro em um estacionamento.");
         log(" 4 - Excluir dados.");
-        log(" 5 - Debug all parking lots.");
     }
 
     private void startRegistering(Scanner scanner){

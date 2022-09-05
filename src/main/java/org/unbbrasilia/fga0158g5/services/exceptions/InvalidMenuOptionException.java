@@ -6,6 +6,10 @@ public class InvalidMenuOptionException extends Exception {
         super("Opção de menu inválida, voltando ao menu principal.");
     }
 
+    public InvalidMenuOptionException(String message){
+        super(message);
+    }
+
     @Override
     public void printStackTrace(){
         System.out.println(getMessage());
