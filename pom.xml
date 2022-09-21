@@ -6,6 +6,7 @@
 
     <groupId>org.unbbrasilia.fga</groupId>
     <artifactId>FGA0158</artifactId>
+    <packaging>pom</packaging>
     <version>1.0-SNAPSHOT</version>
     <build>
         <plugins>
@@ -19,6 +20,9 @@
             </plugin>
         </plugins>
     </build>
+    <modules>
+        <module>TP3</module>
+    </modules>
 
     <dependencies>
         <dependency>
